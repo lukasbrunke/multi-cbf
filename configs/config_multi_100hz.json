@@ -1,0 +1,8 @@
+{
+    "multi": true,  
+    "use_const_input": true,
+    "opti_type": "conic",
+    "dt": 0.01,
+    "T": 30.0,
+    "run_name": null
+  }
