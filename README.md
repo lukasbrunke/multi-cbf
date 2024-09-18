@@ -1,6 +1,6 @@
 # multi-cbf
 
-This repository contains the scripts required to reproduce the simulation results in our paper "Preventing Unconstrained CBF Safety Filters Caused by Invalid Relative Degree Assumptions."
+This repository contains the scripts required to reproduce the simulation results in our paper ["Preventing Unconstrained CBF Safety Filters Caused by Invalid Relative Degree Assumptions."](https://arxiv.org/abs/2409.11171)
 
 ## Use
 This was tested on Ubuntu 20.04. 
@@ -77,15 +77,14 @@ Multi-CBF safety filter at 100 Hz:
 Please cite our work as:
 
 ```bibtex
-@ARTICLE{multicbf2024,
-      author={Brunke, Lukas and Zhou, Siqi and Schoellig, Angela P.},
-      journal={}, 
+@misc{multicbf2024,
       title={Preventing Unconstrained CBF Safety Filters Caused by Invalid Relative Degree Assumptions}, 
+      author={Lukas Brunke and Siqi Zhou and Angela P. Schoellig},
       year={2024},
-      volume={},
-      number={},
-      pages={},
-      doi={}
+      eprint={2409.11171},
+      archivePrefix={arXiv},
+      primaryClass={eess.SY},
+      url={https://arxiv.org/abs/2409.11171}, 
 }
 ```
 
