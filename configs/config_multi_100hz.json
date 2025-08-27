@@ -4,5 +4,6 @@
     "opti_type": "conic",
     "dt": 0.01,
     "T": 30.0,
+    "synthesis_id": "20250826_103440_2",
     "run_name": null
   }

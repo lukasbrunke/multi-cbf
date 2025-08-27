@@ -1,6 +1,6 @@
 # multi-cbf
 
-This repository contains the scripts required to reproduce the simulation results in our paper ["Preventing Unconstrained CBF Safety Filters Caused by Invalid Relative Degree Assumptions."](https://arxiv.org/abs/2409.11171)
+This repository contains the scripts required to reproduce the simulation results in our paper ["Preventing Inactive CBF Safety Filters Caused by Invalid Relative Degree Assumptions."](https://arxiv.org/abs/2409.11171)
 
 ## Use
 This was tested on Ubuntu 20.04. 
@@ -29,7 +29,22 @@ conda env create -f environment.yml
 Create a new [wandb.ai](wandb.ai) project and modify the name of the project by setting `"wandb_project"` to the name of your project in `configs/config.json`. If you don't want to use [wandb.ai](wandb.ai), you can deactivate it by setting `"wandb_project": ""`.   
 
 #### Run
-Run the `main.py` script:
+
+1. Step (OPTIONAL): Run the multi-CBF synthesis. This step is optional. Instead of running this you may directly use the synthesized CBFs and start from step 2. The synthesis is a sampling-based approach that is implemented using multi-threading. You may set all the desired parameters in the associated config file.
+
+```sh
+python synthesize_cbfs.py --config configs/config_synthesis.json
+```
+
+Depending on the setttings (especially the number of samples) and available cores, this may take more or less time. The default settings here took about 2 hours using 12 workers on my laptop, but could be significantly reduced to achieve satisfactory results. To analyze the resulting CBFs run the following:
+
+```sh
+python analyze_cbfs.py synthesized_cbfs/successful_samples_20250826_103440_2.npy
+```
+
+If you ran your own synthesis, you will have to replace the date and time stamp accordingly. 
+
+2. Step: Run the `main.py` script:
 
 ```sh
 python3 main.py --config configs/config_multi_100hz.json
@@ -77,14 +92,12 @@ Multi-CBF safety filter at 100 Hz:
 Please cite our work as:
 
 ```bibtex
-@misc{multicbf2024,
-      title={Preventing Unconstrained CBF Safety Filters Caused by Invalid Relative Degree Assumptions}, 
+@ARTICLE{multicbf2025,
+      title={Preventing Inactive CBF Safety Filters Caused by Invalid Relative Degree Assumptions}, 
+      journal={IEEE Transactions on Automatic Control}, 
       author={Lukas Brunke and Siqi Zhou and Angela P. Schoellig},
-      year={2024},
-      eprint={2409.11171},
-      archivePrefix={arXiv},
-      primaryClass={eess.SY},
-      url={https://arxiv.org/abs/2409.11171}, 
+      year={2025},
+      note={accepted}, 
 }
 ```
 

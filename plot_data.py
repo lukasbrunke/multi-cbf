@@ -109,16 +109,22 @@ def plot_ellipsoids(ax, P_list, c_list, kappa_list, B, xlims, ylims, fill=True):
 
 def plot_colormesh_and_bar(fig, ax, X1, X2, Z, cmap='RdBu'):
     # plot the heatmap using divided colormap
-    ax.pcolormesh(X1, X2, Z, cmap=cmap, vmin=-np.max(abs(Z)), vmax=np.max(abs(Z)))
+    max_abs_z = np.max(abs(Z))
+    
+    # Handle case where all values are the same (vmin == vmax would cause division by zero)
+    if max_abs_z == 0 or not np.isfinite(max_abs_z):
+        vmin, vmax = -1, 1  # Use default range for uniform data
+    else:
+        vmin, vmax = -max_abs_z, max_abs_z
+    
+    mesh = ax.pcolormesh(X1, X2, Z, cmap=cmap, vmin=vmin, vmax=vmax)
 
     # add colorbar to ax
-    fig.colorbar(ax.pcolormesh(X1, X2, Z, cmap=cmap, vmin=-np.max(abs(Z)), vmax=np.max(abs(Z))), ax=ax, )
+    fig.colorbar(mesh, ax=ax)
 
 
-def plot_data(data_dir, run_json):     
-    # Set the number of steps to skip when plotting the time-based data
-    skip_steps = 1
-
+def plot_data(data_dir, run_json, skip_steps=1):    
+     
     # Load the data from the run json
     kappa_list = run_json['kappas']['value']
     P_list = [np.array(P) for P in run_json['P_list']['value']]
@@ -210,7 +216,7 @@ def plot_data(data_dir, run_json):
     plt.savefig(os.path.join(data_dir, "U_filtered.png"))
     
     # Third set of subplots: x(t) and u(t) over time
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(14, 4))
 
     xlims = [-2, 2]
     ylims = [-2, 2]
@@ -279,6 +285,7 @@ if __name__ == "__main__":
     run_name = config['run_name']
     file_name = config['file_name']
     use_latest = config['use_latest']
+    skip_steps = config['skip_steps']
 
     # Read WandB project name from separate config file
     with open ('configs/config.json', 'r') as f:
@@ -292,4 +299,4 @@ if __name__ == "__main__":
     file_path, run_json = get_file_path_from_run(wandb_project, run_name, file_name, use_latest)
     print("Plotting data from: ", file_path)
 
-    plot_data(file_path, run_json)
+    plot_data(file_path, run_json, skip_steps=skip_steps)

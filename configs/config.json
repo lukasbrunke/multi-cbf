@@ -1,4 +1,21 @@
 {
     "wandb_project": "multi-cbf",
-    "data_dir": "multi-cbf-sim"
+    "data_dir": "multi-cbf-sim",
+    "A": [[0.0, 1.0], [0.0, 0.0]],
+    "B": [[0.0], [1.0]],
+    "P_diag": [1.0, 2.0],
+    "c": [0.0, 0.0],
+    "x0": [0.5, 0.3],
+    "u": [-1.0],
+    "u_min": -2.0,
+    "u_max": 2.0,
+    "kappa_large_down": {"family": "piecewise", "slope_pos": 2.0, "slope_neg": 2.0, "inner_slope_pos": 1.0, "inner_slope_neg": 1.0, "offset": 0.0},
+    "kappa_large_up": {"family": "piecewise", "slope_pos": 2.0, "slope_neg": 2.0, "inner_slope_pos": 1.0, "inner_slope_neg": 1.0, "offset": 0.0},
+    "kappa": {"family": "piecewise", "slope_pos": 2.0, "slope_neg": 2.0, "inner_slope_pos": 1.0, "inner_slope_neg": 1.0, "offset": 0.0},
+    "x1_min": -1.0,
+    "x1_max": 1.0,
+    "x2_min": -0.7,
+    "x2_max": 0.7,
+    "num_points_x1": 200,
+    "num_points_x2": 200
   }

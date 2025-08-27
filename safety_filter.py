@@ -4,7 +4,7 @@ import casadi as cs
 
 class SafetyFilter:
 
-    def __init__(self, input_dim, kappa_list, opti_type='conic', solver='qpoases'):
+    def __init__(self, input_dim, kappa_list, u_min, u_max, opti_type='conic', solver='qpoases'):
         self.opti_type = opti_type
         self.solver = solver
         self.opts = {'printLevel': 'low'}
@@ -16,6 +16,9 @@ class SafetyFilter:
 
         self.kappa_list = kappa_list
         self.num_cbf_constraints = len(kappa_list)
+
+        self.u_min = u_min
+        self.u_max = u_max
 
         self.setup_cbf_filter_optimizer()
 
@@ -49,6 +52,9 @@ class SafetyFilter:
             kappa_at_hx = self.kappa_at_hx[i]
             self.constraints.append(self.opti.subject_to(Lfh + Lgh @ self.u_opti >= - kappa_at_hx))
 
+        self.constraints.append(self.opti.subject_to(self.u_opti >= self.u_min))
+        self.constraints.append(self.opti.subject_to(self.u_opti <= self.u_max))
+
         # Set up minimization problem
         self.opti.minimize(self.cost)
 
@@ -72,7 +78,7 @@ class SafetyFilter:
 
 class SafetyFilterQuadratic(SafetyFilter):
 
-    def __init__(self, input_dim, kappa_list, P_list, c_list, fx_func, gx_func, opti_type='conic', solver='qpoases'):
+    def __init__(self, input_dim, kappa_list, P_list, c_list, fx_func, gx_func, u_min, u_max, opti_type='conic', solver='qpoases'):
         # CBF of the form h_i(x) = offset_i - (x - c_i)^T P_i (x - c_i) >= 0
         self.P_list = P_list
         self.c_list = c_list
@@ -81,7 +87,7 @@ class SafetyFilterQuadratic(SafetyFilter):
         self.f = fx_func
         self.g = gx_func
         
-        super().__init__(input_dim, kappa_list, opti_type, solver)
+        super().__init__(input_dim, kappa_list, u_min, u_max, opti_type, solver)
 
     def kappa_at_x(self, kappa, P, x, c):
         rhs = (1 - kappa["offset"]) - (x - c).T @ P @ (x - c) 

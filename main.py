@@ -144,7 +144,11 @@ def simulate_certified_sys(safety_filter, x_next_func, N, x0, u):
     u_max_infeasible = []
     u_min_infeasible = []
 
+    reached_infeasible = False
+
     for i in range(N - 1):
+        # if reached_infeasible:
+        #     break
         u_unsafe_traj[:, i] = u
 
         # Get input bounds
@@ -167,6 +171,7 @@ def simulate_certified_sys(safety_filter, x_next_func, N, x0, u):
             u_filtered = u
             num_infeasible_points += 1
             infeasible_points.append(i)
+            reached_infeasible = True
         # u_filtered = u
         u_safe_traj[:, i] = u_filtered
         x[:, i + 1] = x_next_func(x[:, i], u_filtered).full().flatten()
@@ -233,7 +238,7 @@ def determine_input_bounds(safety_filter, P_list, c_list, u, x1, x2):
     return u_max, U_max, U_min, U_filtered, inside_safe_set
 
 
-def main(u_list, data_dir, N_list=[1000], dt=0.01, d_offsets=None, multi=True, opti_type="conic", wandb_project=""):
+def main(u_list, data_dir, config, N_list=[1000], dt=0.01, d_offsets=None, multi=True, opti_type="conic", wandb_project=""):
     # Initialize quadrotor motion
     home_dir = os.path.expanduser("~")
     data_dir = os.path.join(home_dir, data_dir)
@@ -244,40 +249,48 @@ def main(u_list, data_dir, N_list=[1000], dt=0.01, d_offsets=None, multi=True, o
     os.makedirs(data_dir, exist_ok=True)
     print("Data will be saved to: ", data_dir)
 
+    if multi:
+        synthesis_id = config['synthesis_id']
+    else:
+        synthesis_id = None
+
+    # Define the system matrices
+    A = np.array(config['A'])  # used for evaluation experiment data!
+    B = np.array(config['B'])  # used for evaluation experiment data!
+
     # Define the state and input dimensions
-    state_dim = 2
-    input_dim = 1
+    state_dim = A.shape[0]
+    input_dim = B.shape[1]
+
+    B = B.reshape((state_dim, input_dim))
 
     # Define the casadi state and input variables
     x_cs = cs.SX.sym('x_cs', (state_dim, 1))
-    u_cs = cs.SX.sym('u_cs', (input_dim, 1))
-
-    # Define the system matrices
-    A = np.array([[0, 1], [0.0, 0.0]])  # used for evaluation experiment data!
-    B = np.array([[0], [1.0]])  # used for evaluatin experiment data!
+    u_cs = cs.SX.sym('u_cs', (input_dim, 1))    
 
     # Define the system
     x_dot_func = system_cs(x_cs, u_cs, A, B)
 
     # Quadratic CBF: Define the ellipsoid matrices in numpy
-    P = np.array([[1.0, 0.0], [0.0, 2.0]])
-    P_large = np.array([[0.5, 0.0], [0.0, 0.3]])
-    # P_large = np.array([[0.4, 0.0], [0.0, 0.2]])
+    P = np.diag(config['P_diag'])
     
     # Quadratic CBF: Define the ellipsoid center
-    c = np.array([[0], [0]])
-    c_large_up = np.array([[0.0], [1.3]])
-    c_large_down = np.array([[0.0], [-1.3]])
+    c = np.array(config['c']).reshape((state_dim, 1))
+
+    u_min = config['u_min']
+    u_max = config['u_max']
 
     # Quadratic CBF: Define the class K functions
-    kappa_large_down = {"family": "piecewise", "slope_pos": 2.0, "slope_neg": 2.0, "inner_slope_pos": 1.0, "inner_slope_neg": 1.0, "offset": 0.0}
-    kappa_large_up = {"family": "piecewise", "slope_pos": 2.0, "slope_neg": 2.0, "inner_slope_pos": 1.0, "inner_slope_neg": 1.0, "offset": 0.0}
-    kappa = {"family": "piecewise", "slope_pos": 2.0, "slope_neg": 2.0, "inner_slope_pos": 1.0, "inner_slope_neg": 1.0, "offset": 0.0}
+    kappa_large_down = config['kappa_large_down']
+    kappa_large_up = config['kappa_large_up']
+    kappa = config['kappa']
 
     # Select whether to use multiple CBFs or only a single one
     if multi:
-        P_list = [P_large, P_large]
-        c_list = [c_large_down, c_large_up]
+        P_list = np.load(f"synthesized_cbfs/best_P_list_successful_samples_{synthesis_id}.npy")
+        c_list = np.load(f"synthesized_cbfs/best_c_list_successful_samples_{synthesis_id}.npy")
+
+        # TODO: add the kappa_list for the large CBFs   
         kappa_list = [kappa_large_down, kappa_large_up]
 
         if not d_offsets is None:
@@ -290,6 +303,9 @@ def main(u_list, data_dir, N_list=[1000], dt=0.01, d_offsets=None, multi=True, o
         c_list = [c]
         kappa_list = [kappa]
 
+        if not d_offsets is None:
+            kappa["offset"] = d_offsets[0]
+
     # Calculate f_max
     f_max = calc_f_max(A, P_list, c_list)
 
@@ -300,13 +316,13 @@ def main(u_list, data_dir, N_list=[1000], dt=0.01, d_offsets=None, multi=True, o
     x_next_func = rk4_cs(x_cs, u_cs, x_dot_func, dt)
 
     # Define the initial state
-    x0 = np.array([[0.5], [0.3]])
+    x0 = np.array(config['x0']).reshape((state_dim, 1))
 
     # Set up a grid for the input bounds
-    x1_min, x1_max = -1.0, 1.0
-    x2_min, x2_max = -0.7, 0.7
-    num_points_x1 = 200
-    num_points_x2 = 200
+    x1_min, x1_max = config['x1_min'], config['x1_max']
+    x2_min, x2_max = config['x2_min'], config['x2_max']
+    num_points_x1 = config['num_points_x1']
+    num_points_x2 = config['num_points_x2']
     x1 = np.linspace(x1_min, x1_max, num_points_x1)
     x2 = np.linspace(x2_min, x2_max, num_points_x2)
 
@@ -336,7 +352,7 @@ def main(u_list, data_dir, N_list=[1000], dt=0.01, d_offsets=None, multi=True, o
     # Define the safety filter
     f_x = cs.Function('f_x', [x_cs], [A @ x_cs])
     g_x = cs.Function('g_x', [x_cs], [B])
-    safety_filter = SafetyFilterQuadratic(input_dim, kappa_list, P_list, c_list, f_x, g_x, opti_type=opti_type)
+    safety_filter = SafetyFilterQuadratic(input_dim, kappa_list, P_list, c_list, f_x, g_x, u_min, u_max, opti_type=opti_type)
     
     # Simulate the system using the safety filter
     if len(N_list) == 1:
@@ -386,7 +402,7 @@ def main(u_list, data_dir, N_list=[1000], dt=0.01, d_offsets=None, multi=True, o
                 start_id += N
 
     # Determine the input bounds and the filtered control inputs over a grid
-    u_max, U_max, U_min, U_filtered, inside_safe_set = determine_input_bounds(safety_filter, P_list, c_list, u, x1, x2)
+    u_max_2, U_max, U_min, U_filtered, inside_safe_set = determine_input_bounds(safety_filter, P_list, c_list, u, x1, x2)
 
     # Calculate the tightening of the constraints based on the sampling time
     lipschitz_sys = np.linalg.norm(A, 2)
@@ -450,6 +466,10 @@ if __name__ == '__main__':
     with open(args.config, 'r') as f:
         config = json.load(f)
 
+    # Read WandB project name from separate config file
+    with open ('configs/config.json', 'r') as f:
+        config.update(json.load(f))
+
     # Extract parameters from config dictionary
     multi = config['multi']
     use_const_input = config['use_const_input']
@@ -458,10 +478,6 @@ if __name__ == '__main__':
     T = config['T']
     run_name = config['run_name']
 
-    # Read WandB project name from separate config file
-    with open ('configs/config.json', 'r') as f:
-        config = json.load(f)
-
     wandb_project = config['wandb_project']
     data_dir = config['data_dir']
 
@@ -469,7 +485,8 @@ if __name__ == '__main__':
     N = int(T / dt)
 
     # Define the uncertified control input
-    u = np.array([-0.1])
+    u = np.array([config['u']])
+
     if use_const_input:
         N_list = [N]
         u_list = [u]
@@ -505,5 +522,5 @@ if __name__ == '__main__':
             d_offsets.append(calc_d(kappa_slope, lipschitz, M, f_max, g_max, u_max, lipschitz_sys, dt))
         print(d_offsets)
 
-    main(u_list=u_list, data_dir=data_dir, N_list=N_list, dt=dt, d_offsets=d_offsets, multi=multi, opti_type=opti_type, 
-         wandb_project=wandb_project)
+    main(u_list=u_list, data_dir=data_dir, config=config, N_list=N_list, dt=dt, d_offsets=d_offsets, multi=multi,
+         opti_type=opti_type, wandb_project=wandb_project)
